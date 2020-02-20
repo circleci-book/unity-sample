@@ -6,50 +6,34 @@ executors:
       unity-version:
         type: string
         default: 2018.4.16f1
+      component:
+        type: string
+        default: ""
     docker:
-      - image: gableroux/unity3d:<< parameters.unity-version >>
+      - image: gableroux/unity3d:<< parameters.unity-version >><<# parameters.component >>-<< parameters.component >><</ parameters.component >>
 
 commands:
   activate:
     steps:
       - run:
-          name: Decode License content
+          name: ライセンスをデコード
           command: |
             echo "$UNITY_LICENSE_CONTENT" | base64 --decode | tr -d '\r' > yourulffile.ulf
       - run:
           name: |
-            Activation
+            ライセンスのアクティベーション
 # logFile: ログ
 # batchmode: バッチモード。コマンドラインで完結するようにポップアップを表示しないオプション
 # nographics: GPUのないマシンで実行
 # manualLicenseFile: ライセンスファイル(.ulf)
           command: |
-            /opt/Unity/Editor/Unity -logFile \
-                                    -batchmode \
+            /opt/Unity/Editor/Unity -batchmode \
                                     -nographics \
                                     -quit \
                                     -logFile /dev/stdout \
-                                    -manualLicenseFile yourulffile.ulf || exit 0
-
+                                    -manualLicenseFile yourulffile.ulf > unity.log || true
+            cat unity.log | grep "Next license update check"
 jobs:
-  trigger-workflow:
-    machine:
-      image: 'ubuntu-1604:201903-01'
-    parameters:
-      unity-version:
-        type: string
-        default: "latest"
-    steps:
-      - run:
-          name: Trigger test-build workflow
-          command: |
-            VCS_TYPE=$(echo ${CIRCLE_BUILD_URL} | cut -d '/' -f 4)
-
-            curl -u ${CIRCLE_TOKEN}: -X POST --header "Content-Type: application/json" -d "{
-              \"branch\": \"${CIRCLE_BRANCH}\",
-              \"parameters\": {\"run-triggered-workflow\": true, \"unity-version\":\"<< parameters.unity-version >>\"}
-            }" "https://circleci.com/api/v2/project/${VCS_TYPE}/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pipeline"
-
   test:
     parameters:
       test-platform:
@@ -77,18 +61,23 @@ jobs:
             path: << parameters.test-platform >>-results.xml
 
   build:
-    executor: default
     parameters:
+      e:
+        type: executor
       build-target:
         type: string
+    executor: << parameters.e >>
     steps:
       - checkout
       - activate
       - run:
-          name: Build for << parameters.build-target >>
+          name: Buildsディレクトリを作成
+          command: mkdir -p Builds
+      - run:
+          name: << parameters.build-target >>用ビルド
           no_output_timeout: 60m
           command: |
-            xvfb-run --auto-servernum --server-args='-screen 0 640x480x24' \
+            xvfb-run -a \
             /opt/Unity/Editor/Unity -projectPath $(pwd) \
                                     -batchmode \
                                     -nographics \
@@ -96,21 +85,16 @@ jobs:
                                     -buildTarget << parameters.build-target >> \
                                     -executeMethod BuildHelper.<< parameters.build-target >> \
                                     -quit
+
+      - run:
+          name: tar
+          command: |
+            cd Builds && tar --create --gzip --verbose --file UnitySample.tar.gz ./*
       - store_artifacts:
           path: ./Builds
 
 workflows:
-  #trigger-workflow:
-  #  unless: << pipeline.parameters.run-triggered-workflow >>
-  #  jobs:
-  #    - trigger-workflow:
-  #        name: UnityHub LTS release
-  #        unity-version: 2018.4.16f1
-  #    # - trigger-workflow:
-  #    #     name: UnityHub Latest release
-  #    #     unity-version: 2019.3.0f6
   test-build:
-    # when: << pipeline.parameters.run-triggered-workflow >>
     jobs:
       - test:
           name: test-editmode
@@ -121,18 +105,26 @@ workflows:
       - build:
           name: Linux
           build-target: StandaloneLinux64
+          e:
+            name: default
           requires:
             - test-editmode
             - test-playmode
       - build:
           name: MacOS
           build-target: StandaloneOSX
+          e:
+            name: default
+            component: mac
           requires:
             - test-editmode
             - test-playmode
       - build:
           name: Windows
           build-target: StandaloneWindows64
+          e:
+            name: default
+            component: windows
           requires:
             - test-editmode
             - test-playmode

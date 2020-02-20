@@ -18,7 +18,7 @@ commands:
       - run:
           name: ライセンスをデコード
           command: |
-            echo "$UNITY_LICENSE_RAW_CONTENT" > yourulffile.ulf
+            echo "$UNITY_LICENSE_CONTENT" | base64 --decode > yourulffile.ulf
       - run:
           name: |
             ライセンスのアクティベーション

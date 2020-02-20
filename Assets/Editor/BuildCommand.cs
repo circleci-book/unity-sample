@@ -5,24 +5,19 @@ using UnityEditor;
 
 public static class BuildHelper
 {
-	private static string _buildLocation;
-
 	public static void StandaloneWindows64()
 	{
-		SetupVariables();
-		BuildPipeline.BuildPlayer(GetScenes(), _buildLocation + ".exe", BuildTarget.StandaloneWindows64, BuildOptions.None);
+		BuildPipeline.BuildPlayer(GetScenes(), getLocationPath(), BuildTarget.StandaloneWindows64, BuildOptions.None);
 	}
 
 	public static void StandaloneLinux64()
 	{
-		SetupVariables();
-		BuildPipeline.BuildPlayer(GetScenes(), _buildLocation, BuildTarget.StandaloneLinuxUniversal, BuildOptions.None);
+		BuildPipeline.BuildPlayer(GetScenes(), getLocationPath(), BuildTarget.StandaloneLinuxUniversal, BuildOptions.None);
 	}
 
 	public static void StandaloneOSX()
 	{
-		SetupVariables();
-		BuildPipeline.BuildPlayer(GetScenes(), _buildLocation + ".app", BuildTarget.StandaloneOSX, BuildOptions.None);
+		BuildPipeline.BuildPlayer(GetScenes(), getLocationPath(), BuildTarget.StandaloneOSX, BuildOptions.None);
 	}
 
 	private static string[] GetScenes()
@@ -30,10 +25,10 @@ public static class BuildHelper
 		return EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
 	}
 
-	private static void SetupVariables()
-	{
-		PlayerSettings.productName = "Unity Sample";
-		PlayerSettings.bundleVersion = "0.0.0.0";
-		_buildLocation = "./Builds/";
-	}
+    private static string getLocationPath()
+    {
+        var buildLocation = "./Builds/";
+        var projectName = "UnitySample";
+        return buildLocation + projectName;
+    }
 }

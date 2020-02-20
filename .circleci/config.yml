@@ -3,14 +3,11 @@ version: 2.1
 executors:
   default:
     parameters:
-      unity-version:
-        type: string
-        default: 2018.4.16f1
       component:
         type: string
         default: ""
     docker:
-      - image: gableroux/unity3d:<< parameters.unity-version >><<# parameters.component >>-<< parameters.component >><</ parameters.component >>
+      - image: gableroux/unity3d:2018.4.16f1<<# parameters.component >>-<< parameters.component >><</ parameters.component >>
 
 commands:
   activate:

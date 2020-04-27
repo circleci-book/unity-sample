@@ -111,7 +111,7 @@ workflows:
             - test-editmode
             - test-playmode
       - build:
-          name: MacOS
+          name: macOS
           build-target: StandaloneOSX
           e:
             name: default
